@@ -50,7 +50,7 @@ class BASClass:
     @staticmethod
     def get_by_school(client, school_id, school_year_id=None):
         endpoint = 'GetBySchool'
-        url = '{BASE_URL}/api/class/{endpoint}/{school_id}'
+        url = f'{BASE_URL}/api/class/{endpoint}/{school_id}'
 
         if school_year_id is None:
             school_year_id = client.default_school_year
