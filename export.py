@@ -1,4 +1,3 @@
-from . import BASE_URL, HTTP_ERROR
 import dateutil
 import re
 
@@ -27,40 +26,38 @@ class ExportFile:
         data_clean = re.sub(regex_pattern, regex_replacement, data)
         return data_clean
 
-def export(client, endpoint, year, district_id):
-    export_url = f'{BASE_URL}/export/{endpoint}/{district_id}'
-    querystring = {'year': year}
+class Export:
+    def __init__(self, client):
+        self._client = client
+        self.all_exports = [self.fpc_assessments_by_district_and_year, self.assessments_by_district_and_year, self.intervention_records_by_district_and_year]
 
-    try:
-        export_response = client.session.get(export_url, params=querystring)
-        export_response.raise_for_status()
-    except HTTP_ERROR as err:
-        print(err)
+    def get_export(self, endpoint, year, district_id):
+        path = f'/export/{endpoint}/{district_id}'
+        querystring = {'year': year}
 
-    if export_response.ok:
+        export_response = self._client._request('GET', path, False, params=querystring)
         return ExportFile(export_response)
 
-def fpc_assessments_by_district_and_year(client, year=None, district_id=None):
-    if district_id is None:
-        district_id = client.preferences.district_id
-    if year is None:
-        year = client.preferences.year
+    def fpc_assessments_by_district_and_year(self, year=None, district_id=None):
+        if district_id is None:
+            district_id = self._client.preferences.district_id
+        if year is None:
+            year = self._client.preferences.year
 
-    return export(client, 'FPCAssessmentsByDistrictAndYear', year, district_id)
+        return self.get_export('FPCAssessmentsByDistrictAndYear', year, district_id)
 
-def assessments_by_district_and_year(client, year=None, district_id=None):
-    if district_id is None:
-        district_id = client.preferences.district_id
-    if year is None:
-        year = client.preferences.year
-    return export(client, 'AssessmentsByDistrictAndYear', year, district_id)
+    def assessments_by_district_and_year(self, year=None, district_id=None):
+        if district_id is None:
+            district_id = self._client.preferences.district_id
+        if year is None:
+            year = self._client.preferences.year
 
-def intervention_records_by_district_and_year(client, year=None, district_id=None):
-    if district_id is None:
-        district_id = client.preferences.district_id
-    if year is None:
-        year = client.preferences.year
-    return export(client, 'InterventionRecordsByDistrictAndYear', year, district_id)
+        return self.get_export('AssessmentsByDistrictAndYear', year, district_id)
 
-def all_exports():
-    return [fpc_assessments_by_district_and_year, assessments_by_district_and_year, intervention_records_by_district_and_year]
+    def intervention_records_by_district_and_year(self, year=None, district_id=None):
+        if district_id is None:
+            district_id = self._client.preferences.district_id
+        if year is None:
+            year = self._client.preferences.year
+
+        return self.get_export('InterventionRecordsByDistrictAndYear', year, district_id)

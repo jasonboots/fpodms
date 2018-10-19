@@ -1,7 +1,7 @@
+#!/python3.6
 import requests
 import inflection
 
-BASE_URL = 'https://fpdms.heinemann.com'
 HTTP_ERROR = requests.exceptions.HTTPError
 
 class Client:
@@ -11,25 +11,35 @@ class Client:
     :param password: A string, a valid login email address.
     """
     def __init__(self, email_address, password):
-        login_url = f'{BASE_URL}/api/account/login'
-        session_payload = {'emailAddress': email_address, 'password': password}
+        self.base_url = 'https://fpdms.heinemann.com'
+        self.session = requests.session()
+
+        login_path = '/api/account/login'
+        login_payload = {'emailAddress': email_address, 'password': password}
+        login_response = self._request('POST', login_path, True, data=login_payload)
+
+        session_data = _SessionData(**login_response['data'])
+        self.preferences = session_data.preferences
+        self.session_timeout_minutes = session_data.session_timeout_minutes
+        self.state = session_data.state
+        self.user = session_data.user
+
+        self.api = api.API(self)
+        self.export = export.Export(self)
+
+    def _request(self, method, path, json_response, params=None, data=None):
+        url = f'{self.base_url}{path}'
         try:
-            session = requests.session()
-            login_response = session.post(login_url, data=session_payload)
-            login_response.raise_for_status()
-        except HTTP_ERROR as err:
-            print(err)
+            response = self.session.request(method, url, params=params, data=data)
+            response.raise_for_status()
 
-        if login_response.ok:
-            self.session = session
+            if json_response:
+                return response.json()
+            else:
+                return response
 
-            login_response_json = login_response.json()
-            session_data = _SessionData(**login_response_json['data'])
-
-            self.preferences = session_data.preferences
-            self.session_timeout_minutes = session_data.session_timeout_minutes
-            self.state = session_data.state
-            self.user = session_data.user
+        except HTTP_ERROR as e:
+            print(e)
 
 class _SessionData:
     def __init__(self, **session_data):
@@ -43,6 +53,5 @@ class _SessionData:
             else:
                 self.__dict__[k] = v
 
-__all__ = ['api', 'export']
-import fpodms.api
-import fpodms.export
+from fpodms import api
+from fpodms import export
