@@ -1,30 +1,31 @@
 from . import BASE_URL, HTTP_ERROR
-from dateutil import parser
+import dateutil
 import re
 
 class ExportFile:
-    def __init__(self, data, filename, filedate):
-        self.data = data
+    def __init__(self, http_response):
+        self.data = self.clean_data(http_response.text)
+
+        content_disposition_header = http_response.headers['Content-Disposition']
+        filename_pattern = 'attachment; filename="(.*)"'
+        filename_match = re.match(filename_pattern, content_disposition_header)
+        filename = filename_match.group(1)
         self.filename = filename
+
+        date_header = http_response.headers['Date']
+        date_header_parsed = dateutil.parser.parse(date_header)
+        filedate = date_header_parsed.isoformat()
         self.filedate = filedate
 
-def clean_export_data(export_data):
-    """Export data has a text qualifier: ="{data}", this strips them out"""
-    regex_pattern = r'="([^\"]*)"'
-    regex_replacement = r'\1' ## capture group 1 == the actual str
-    export_data_clean = re.sub(regex_pattern, regex_replacement, export_data)
-    return export_data_clean
-
-def extract_export_filename(export_headers):
-    """
-    """
-    filename_pattern = 'attachment; filename="(.*)"'
-    filename_match = re.match(
-            filename_pattern,
-            export_headers['Content-Disposition']
-        )
-    filename = filename_match.group(1)
-    return filename
+    @staticmethod
+    def clean_data(data):
+        """
+        Export data has a text qualifier: ="{data}", this strips them out
+        """
+        regex_pattern = r'="([^\"]*)"'
+        regex_replacement = r'\1'
+        data_clean = re.sub(regex_pattern, regex_replacement, data)
+        return data_clean
 
 def export(client, endpoint, year, district_id):
     export_url = f'{BASE_URL}/export/{endpoint}/{district_id}'
@@ -37,43 +38,29 @@ def export(client, endpoint, year, district_id):
         print(err)
 
     if export_response.ok:
-        export_data_clean = clean_export_data(export_response.text)
-
-        export_filename = extract_export_filename(export_response.headers)
-
-        export_filedate = export_response.headers['Date']
-        export_filedate_parsed = parser.parse(export_filedate)
-        export_filedate_iso = export_filedate_parsed.isoformat()
-
-        return ExportFile(
-                data=export_data_clean,
-                filename=export_filename,
-                filedate=export_filedate_iso
-            )
+        return ExportFile(export_response)
 
 def fpc_assessments_by_district_and_year(client, year=None, district_id=None):
-    endpoint = 'FPCAssessmentsByDistrictAndYear'
     if district_id is None:
-        district_id = client.district_id
+        district_id = client.preferences.district_id
     if year is None:
-        year = client.default_school_year
-    return export(client, endpoint, year, district_id)
+        year = client.preferences.year
+
+    return export(client, 'FPCAssessmentsByDistrictAndYear', year, district_id)
 
 def assessments_by_district_and_year(client, year=None, district_id=None):
-    endpoint = 'AssessmentsByDistrictAndYear'
     if district_id is None:
-        district_id = client.district_id
+        district_id = client.preferences.district_id
     if year is None:
-        year = client.default_school_year
-    return export(client, endpoint, year, district_id)
+        year = client.preferences.year
+    return export(client, 'AssessmentsByDistrictAndYear', year, district_id)
 
 def intervention_records_by_district_and_year(client, year=None, district_id=None):
-    endpoint = 'InterventionRecordsByDistrictAndYear'
     if district_id is None:
-        district_id = client.district_id
+        district_id = client.preferences.district_id
     if year is None:
-        year = client.default_school_year
-    return export(client, endpoint, year, district_id)
+        year = client.preferences.year
+    return export(client, 'InterventionRecordsByDistrictAndYear', year, district_id)
 
 def all_exports():
     return [fpc_assessments_by_district_and_year, assessments_by_district_and_year, intervention_records_by_district_and_year]

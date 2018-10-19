@@ -7,7 +7,7 @@ class Year:
         url = f'{BASE_URL}/api/year/{endpoint}'
 
         if is_north_hemisphere is None:
-            is_north_hemisphere = client.session_data['user']['isNorthernHemisphere']
+            is_north_hemisphere = client.user.is_northern_hemisphere
 
         querystring = {'isNorthHemisphere': is_north_hemisphere}
 
@@ -27,12 +27,12 @@ class School:
         endpoint = 'GetByDistrict'
 
         if district_id is None:
-            district_id = client.district_id
+            district_id = client.preferences.district_id
 
         url = f'{BASE_URL}/api/school/{endpoint}/{district_id}'
 
         if school_year_id is None:
-            school_year_id = client.default_school_year
+            school_year_id = client.preferences.year
 
         querystring = {'schoolYearId': school_year_id}
 
@@ -53,7 +53,7 @@ class BASClass:
         url = f'{BASE_URL}/api/class/{endpoint}/{school_id}'
 
         if school_year_id is None:
-            school_year_id = client.default_school_year
+            school_year_id = client.preferences.year
 
         querystring = {'schoolYearId': school_year_id}
 
