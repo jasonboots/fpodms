@@ -1,3 +1,4 @@
+#!/bin/python3.6
 import requests
 import inflection
 
@@ -29,7 +30,7 @@ class Client:
     def _request(self, method, path, json_response, params=None, data=None):
         url = f'{self.base_url}{path}'
         try:
-            response = self.session.request(method, url, params=params, data=data)
+            response = self.session.request(method, url, params=params, json=data)
             response.raise_for_status()
 
             if json_response:
